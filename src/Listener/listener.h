@@ -1,8 +1,13 @@
+#ifndef LISTENER_H
+#define LISTENER_H
+
 #include <iostream>
 #include <filesystem>
 #include <string>
 #include <chrono>
 #include <thread>
+#include <logger.h>
+
 
 namespace fs = std::filesystem;
 namespace ch = std::chrono;
@@ -23,9 +28,14 @@ class File_Listener
 
     static bool na_dir_create(const fs::path& p);
 
+    Logger logger;
+
   private:
     std::string _dir_in_name = "";
     std::string _dir_out_name = "";
 };
 
 // TODO: Am I interested in copying the symlinks?
+
+#endif
+

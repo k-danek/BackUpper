@@ -23,12 +23,15 @@ void File_Listener::listen(long int milliseconds)
 
         // Type conversion, works for c++20
         //ch::time_point<ch::system_clock> mod_time = ch::system_clock::to_time_t(ch::file_clock::to_sys(mod_time_fs));
- 
+        
+        fs::path backup_path = get_out_path(entry.path()); 
+
         if (start_of_loop < mod_time)
         {
           // Copy the file into bak directory 
-          fs::copy(entry.path(), get_out_path(entry.path()), copy_options);
+          fs::copy(entry.path(), backup_path, copy_options);
           std::cout << "Backed file " << entry.path().filename() << " to " << _dir_out_name << "\n";
+          logger.write_event(entry.path(), backup_path, "Modified", mod_time);
         }
       }
     }
@@ -87,6 +90,5 @@ bool File_Listener::na_dir_create(const fs::path& p)
   }
 
   return false;
-
 }
 
