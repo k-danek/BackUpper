@@ -17,20 +17,48 @@ class Logger
 {
   public:
     Logger();
-    ~Logger() = default;
+    ~Logger();
 
     std::ofstream output_file;
     //std::ifstream inputFile("inputFileName");
 
+    // Writes a file event into the logfile.
     void write_event(const std::string& in_dir_file,
                      const std::string& out_dir_file,
                      const std::string& event_type,
                      fs::file_time_type event_time 
                     );
 
+    // Closes and opens the file for append.
+    void reopen();
+
+    // Allows to view the logs and filter them according to filenames.
+    void browse_logs();
+    
+    // Deletes previous logs while opening a new.
+    void clear_open_logs();
+
+    // Reads the in/out directories from existing logfile.
+    bool read_in_out_dirs(std::string& in_directory,
+                          std::string& out_directory
+                         );
+
+    // Simple Getter for whether the logfile exists.
+    bool log_exists();
+
+    // Generates a header for the log file.
+    void add_log_header(std::string& in_directory,
+                        std::string& out_directory);
+
   private:
 
     const std::string _log_filename = "BackUpperLog.txt";
+    bool _log_exists = false;
+    
+    // Fixed strings in the logfile
+    const std::string hot_dir  = "HOT DIRECTORY: ";
+    const std::string back_dir = "BACKUP DIRECTORY: "; 
+
 };
 
 #endif

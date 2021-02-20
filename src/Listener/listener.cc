@@ -3,6 +3,8 @@
 void File_Listener::listen(long int milliseconds)
 {
 
+  std::cout << "Listening... \n";
+
   const auto copy_options = fs::copy_options::overwrite_existing
                           | fs::copy_options::recursive;
 
@@ -14,16 +16,13 @@ void File_Listener::listen(long int milliseconds)
     fs::file_time_type start_of_loop = fs::file_time_type::clock::now();
     
     std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
-  	for(auto& entry: fs::recursive_directory_iterator(_dir_in_name))
+    for(auto& entry: fs::recursive_directory_iterator(_dir_in_name))
     {
       // So far allowing for copying of regular files only
       if(fs::is_regular_file(entry))
       {
         fs::file_time_type mod_time = last_write_time(entry.path());
 
-        // Type conversion, works for c++20
-        //ch::time_point<ch::system_clock> mod_time = ch::system_clock::to_time_t(ch::file_clock::to_sys(mod_time_fs));
-        
         fs::path backup_path = get_out_path(entry.path()); 
 
         if (start_of_loop < mod_time)
@@ -35,6 +34,8 @@ void File_Listener::listen(long int milliseconds)
         }
       }
     }
+    // open and close the log file
+    logger.reopen();
   }
 }
 
@@ -86,9 +87,90 @@ bool File_Listener::na_dir_create(const fs::path& p)
       std::cout << "Invalid option, please try again. Exiting.\n";
       return false;
     }
-  
   }
 
   return false;
 }
+
+void File_Listener::log_file_found_dialog()
+{
+
+  std::string log_choice = "";
+
+  std::cout << "Log file found. How would you like to proceed?\n"
+            << "[c] Continue with previous setup.\n"
+            << "[d] Delete previous logs and start with new setup.\n"
+            << "[b] Browse throught the logs.\n\n"
+            << "Please select: [C/d/b]";
+  
+  std::cin  >> log_choice;
+
+  if(log_choice == ""  ||
+     log_choice == "C" ||
+     log_choice == "c" )
+  {
+      if(logger.read_in_out_dirs(_dir_in_name, _dir_out_name)) 
+      { 
+        // Start Listening.
+        listen(1000);
+      }
+      else // Logger failed to read out the directories from the logfile.
+      {
+        std::cout << "In/out directories not found in the logfile.\n"
+                  << "Do you want to specify new ones? [Y/n].\n";     
+      
+        std::string yn = "";
+        std::cin >> yn;
+        
+        if(yn == ""  ||
+           yn == "y" ||
+           yn == "Y")
+        {
+          dir_entry_dialog();
+        }
+        else
+        {
+          std::cout << "Aborting the setup\n";
+          exit(EXIT_SUCCESS);
+        }
+      }
+  }
+  else if(log_choice == "d" || log_choice == "D")
+  {
+    // Discards old logs, opens a new file.
+    logger.clear_open_logs();
+    // Starts a dialog for new in/out directories.
+    dir_entry_dialog();
+  }
+  else if(log_choice == "b" || log_choice == "B")
+  {
+    logger.browse_logs();
+  }
+  else
+  {
+    std::cout << "Invalid option selected. Please, try again.\n";
+    log_file_found_dialog();
+  }
+}
+
+void File_Listener::dir_entry_dialog()
+{
+  std::string dir_in_name  = "";
+  std::string dir_out_name = "";
+
+  std::cout << "Please enter name of directory to be backed:\n";
+  std::cin >> dir_in_name;
+  while(!File_Listener::na_dir_create(dir_in_name));
+
+  std::cout << "Please enter name of directory for the files to be backed into:\n"; 
+  std::cin >> dir_out_name;
+  while(!File_Listener::na_dir_create(dir_out_name));
+
+  _dir_in_name  = dir_in_name;
+  _dir_out_name = dir_out_name;
+
+  // Activate the File listener
+  listen(1000);
+}
+
 
