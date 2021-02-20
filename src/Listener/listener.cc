@@ -29,7 +29,6 @@ void File_Listener::listen(long int milliseconds)
         {
           // Copy the file into bak directory 
           fs::copy(entry.path(), backup_path, copy_options);
-          std::cout << "Backed file " << entry.path().filename() << " to " << _dir_out_name << "\n";
           logger.write_event(entry.path(), backup_path, "Modified", mod_time);
         }
       }
@@ -169,8 +168,26 @@ void File_Listener::dir_entry_dialog()
   _dir_in_name  = dir_in_name;
   _dir_out_name = dir_out_name;
 
+  logger.add_log_header(dir_in_name, dir_out_name);
+
   // Activate the File listener
   listen(1000);
 }
 
+void File_Listener::_load_files(std::string dir, std::unordered_set<std::string>& set)
+{
+  if(!dir.empty())
+  {
+    for(auto& entry: fs::recursive_directory_iterator(dir))
+    {
+      // Stores only regular files.
+      if(fs::is_regular_file(entry))
+      {
+        // Whole parh is inserted instead of just filename.
+        set.insert(std::string(entry.path()));
+      }
+    }
+
+  }
+}
 

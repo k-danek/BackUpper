@@ -6,6 +6,7 @@
 #include <string>
 #include <chrono>
 #include <thread>
+#include <unordered_set>
 #include <logger.h>
 
 namespace fs = std::filesystem;
@@ -42,6 +43,12 @@ class File_Listener
   private:
     std::string _dir_in_name  = "";
     std::string _dir_out_name = "";
+
+    // Makes sets of filenames from in/out directories.
+    void _load_files(std::string dir, std::unordered_set<std::string>& set);
+
+    std::unordered_set<std::string> _files_listened_to;
+    std::unordered_set<std::string> _files_backed;
 };
 
 // TODO: Am I interested in copying the symlinks?
