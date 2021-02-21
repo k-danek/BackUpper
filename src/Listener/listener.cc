@@ -21,17 +21,21 @@ void File_Listener::listen(unsigned long int milliseconds)
       {
         fs::path backup_path = get_out_path(entry.path()); 
         fs::file_time_type mod_time = last_write_time(entry.path());
-        size_t delete_pos = std::string(entry.path()).find(_del_prefix);
+        size_t delete_pos = std::string(entry.path().filename()).find(_del_prefix);
 
-        if(delete_pos!=std::string::npos)
+        // Delete string needs to be at the begining of the filename.
+        // Otherwise, it would not be a prefix.
+        if(delete_pos==0)
         {
-          
           
           apply_change(entry.path(),
                        backup_path,
                        "deleted",
                        fs::file_time_type::clock::now());
           
+          // Now I am in in need of the delete prefix position in the whole path.
+          delete_pos = std::string(entry.path()).find(_del_prefix);
+
           // Get the path of the file without detele_ prefix.
           std::string unprefixed_filename = std::string(
                 entry.path()).erase(delete_pos, delete_pos+_del_prefix.length());
@@ -51,8 +55,6 @@ void File_Listener::listen(unsigned long int milliseconds)
                         );
 
           }
-      
-
         }
         else if(_files_listened_to.contains(std::string(entry.path())))
         {
@@ -63,6 +65,7 @@ void File_Listener::listen(unsigned long int milliseconds)
         }
         else
         {
+          _files_listened_to.insert(std::string(entry.path()));
           apply_change(entry.path(), backup_path, "created", mod_time);
         }
       }
@@ -110,7 +113,6 @@ void File_Listener::apply_change(const fs::path&    in_path,
 {
   if(change_type!="deleted")
   {
-    
     logger.write_event(in_path, out_path, change_type, mod_time);
     
     // Non-delete events trigger copying.
@@ -119,14 +121,18 @@ void File_Listener::apply_change(const fs::path&    in_path,
   }
   else // More complex delete logic.
   {
-    // Remove the delete file.  
+    // Remove the file from the hot directory.  
     if(fs::remove(in_path))
     {
       logger.write_event(in_path, out_path, change_type, fs::file_time_type::clock::now());
+      _files_listened_to.erase(std::string(in_path));
     }  
+
+    // Remove the file from the backup directory.
     if(fs::remove(out_path))
     {
-      logger.write_event(in_path, out_path, change_type, fs::file_time_type::clock::now());
+      logger.write_event(out_path, out_path, change_type, fs::file_time_type::clock::now());
+      _files_backed.erase(std::string(out_path));
     }  
   }
 }

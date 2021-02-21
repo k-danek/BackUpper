@@ -24,17 +24,22 @@ void Logger::write_event(const std::string& in_dir_file,
     auto event_time_c = ch::system_clock::to_time_t(
                                           ch::file_clock::to_sys(event_time));
 
+    // Time conversion and formatting    
+    char buffer[30];
+    std::strftime(buffer, 30, "%d/%m/%Y %H:%M:%S", std::localtime(&event_time_c));
+    std::string time_str = std::string(buffer); 
+
     if(event_type == "backed up")
     {
       // Second output for the copy.
-      output_file << std::asctime(std::localtime(&event_time_c)) << "|";
-      output_file << event_type << " " << in_dir_file << " to " << out_dir_file << "\n";
+      output_file << time_str << "|" << event_type << " \'" << in_dir_file 
+                  << "\' to \'" << out_dir_file << "\'\n";
     }
     else
     {
       // Altered, creted or deleted case.
-      output_file << std::asctime(std::localtime(&event_time_c)) << "|";
-      output_file << event_type << " " << in_dir_file << "\n";
+      output_file << time_str << "|" << event_type << " \'" << in_dir_file
+                  << "\'\n";
     }  
    
     output_file.flush();    
@@ -66,7 +71,8 @@ void Logger::add_log_header(std::string& in_directory,
 {
   output_file << "This is a log of the BackUpper CLI app.\n"
               << hot_dir  << in_directory  << "\n"
-              << back_dir << out_directory << "\n";
+              << back_dir << out_directory << "\n"
+              << std::string(80, '*') << "\n";
 
   output_file.flush();
   reopen();
@@ -117,22 +123,89 @@ bool Logger::read_in_out_dirs(std::string& in_directory,
 
 void Logger::browse_logs()
 {
+  std::string line;
 
-//  std::string line;
-//
-//  std::fstream logfile;
-//  logfile.open(_log_filename, std::ios::in);
-//
-//  if(logfile.is_open())
-//  {
-//    while(getline(logfile, line))
-//    {
-//    }
-//
-//  }
+  std::fstream logfile;
+
+  if(logfile.is_open())
+  {
+    logfile.close();
+  }
+
+  logfile.open(_log_filename, std::ios::in);
+
+  if(logfile.is_open())
+  {
+
+    char choice = browse_logs_dialog();
+
+    // Create a regular expession for the filtering of the logfile.
+    std::string regex_string;
+    switch(choice)
+    {
+      case 'w':
+      {  
+        // Only the log entries have pipes in them.
+        //regex = std::regex("\\\\|");
+        regex_string = ".*\\|.*";
+        break;
+      }
+      case 'f':
+      {
+        std::cout << "\nPlease enter a regular expession (without quotation marks): ";
+        //std::string regex_str;
+        std::cin >> regex_string;
+        //regex = std::regex(regex_str);
+        break;
+      }
+      case 'd':
+      {
+        std::string time_input;
+        std::cout << "\nPlease enter a date in format" 
+                  << "\"DD/MM/YYYY\", e.g., \"30/12/2021\": ";
+        std::cin >> time_input;
+        regex_string = time_input+".*";
+        break;
+      }
+    }
+
+    std::regex regex_line(regex_string);
+
+    // Looping through the lines of the file. 
+    while(getline(logfile, line))
+    {
+      if(std::regex_match(line, regex_line))
+      {
+        std::cout << line << "\n"; 
+      }
+    }
+  }
 
   return;
 };
 
+char Logger::browse_logs_dialog()
+{
+    // Start of the dialog
+    std::cout << "Log file is opened, what would you like to see?\n"
+              << "[w] Whole log file.\n"
+              << "[f] Lines satisfying a regual expression.\n"
+              << "[d] Insert the time of the log.\n"
+              << "Please enter your choice: [w/f/d]";
+
+    char input_letter;
+    std::cin >> input_letter;
+    if(input_letter != 'w' &&
+       input_letter != 'f' &&
+       input_letter != 'd')
+    {
+      std::cout << "Invalid choice. Please try again. \n";
+      return browse_logs_dialog();
+    }
+    else
+    {
+      return input_letter;
+    }
+}
 
 

@@ -5,10 +5,11 @@
 #include <string>
 #include <filesystem>
 #include <fstream>
-
 #include <chrono>
 #include <iomanip>
 #include <regex>
+#include <algorithm>
+#include <locale>
 
 namespace fs = std::filesystem;
 namespace ch = std::chrono;
@@ -34,8 +35,11 @@ class Logger
     void reopen();
 
     // Allows to view the logs and filter them according to filenames.
+    // TODO: Make this into a class!
     void browse_logs();
-    
+    char browse_logs_dialog();
+    void browse_logs_filter(std::string regexp, std::string line);
+
     // Deletes previous logs while opening a new.
     void clear_open_logs();
 
