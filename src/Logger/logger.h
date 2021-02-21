@@ -8,6 +8,7 @@
 
 #include <chrono>
 #include <iomanip>
+#include <regex>
 
 namespace fs = std::filesystem;
 namespace ch = std::chrono;

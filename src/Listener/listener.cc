@@ -1,35 +1,69 @@
 #include<listener.h>
 
-void File_Listener::listen(long int milliseconds)
+void File_Listener::listen(unsigned long int milliseconds)
 {
+ 
+  init_dirs();
 
   std::cout << "Listening... \n";
 
-  const auto copy_options = fs::copy_options::overwrite_existing
-                          | fs::copy_options::recursive;
-
   while(true)
   {
-    // TODO: Load the state by logger
-
     //ch::time_point<ch::system_clock> start_of_loop = ch::system_clock::now();
     fs::file_time_type start_of_loop = fs::file_time_type::clock::now();
     
     std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+
     for(auto& entry: fs::recursive_directory_iterator(_dir_in_name))
     {
       // So far allowing for copying of regular files only
       if(fs::is_regular_file(entry))
       {
-        fs::file_time_type mod_time = last_write_time(entry.path());
-
         fs::path backup_path = get_out_path(entry.path()); 
+        fs::file_time_type mod_time = last_write_time(entry.path());
+        size_t delete_pos = std::string(entry.path()).find(_del_prefix);
 
-        if (start_of_loop < mod_time)
+        if(delete_pos!=std::string::npos)
         {
-          // Copy the file into bak directory 
-          fs::copy(entry.path(), backup_path, copy_options);
-          logger.write_event(entry.path(), backup_path, "Modified", mod_time);
+          
+          
+          apply_change(entry.path(),
+                       backup_path,
+                       "deleted",
+                       fs::file_time_type::clock::now());
+          
+          // Get the path of the file without detele_ prefix.
+          std::string unprefixed_filename = std::string(
+                entry.path()).erase(delete_pos, delete_pos+_del_prefix.length());
+
+          // Delete the unprefixed file in the backup directory if it is not
+          // present in the hot directory.
+          // This makes it easier to delete files in both places as you can 
+          // you can do that just by renaming the file in the hot directory.
+          if(!fs::exists(unprefixed_filename))
+          {
+            // Trying to delete the original file should not have an effect.
+            // TODO: Try to avoid the abundant delete attempt. 
+            apply_change(entry.path(),
+                         get_out_path(fs::path(unprefixed_filename)),
+                         "deleted",
+                         fs::file_time_type::clock::now()
+                        );
+
+          }
+      
+
+        }
+        else if(_files_listened_to.contains(std::string(entry.path())))
+        {
+          if (start_of_loop < mod_time)
+          {
+            apply_change(entry.path(), backup_path, "altered", mod_time);
+          }
+        }
+        else
+        {
+          apply_change(entry.path(), backup_path, "created", mod_time);
         }
       }
     }
@@ -37,6 +71,66 @@ void File_Listener::listen(long int milliseconds)
     logger.reopen();
   }
 }
+
+void File_Listener::init_dirs()
+{
+  _load_files(_dir_out_name, _files_backed);
+
+  for(auto& entry: fs::recursive_directory_iterator(_dir_in_name))
+  {
+    // So far allowing for copying of regular files only
+    if(fs::is_regular_file(entry))
+    {
+      _files_listened_to.insert(std::string(entry.path()));
+
+      fs::path backup_path = get_out_path(entry.path()); 
+
+      fs::file_time_type mod_time_in  = last_write_time(entry.path());
+
+      if(_files_backed.contains(std::string(backup_path)))
+      {
+        fs::file_time_type mod_time_out = last_write_time(backup_path);
+        if(mod_time_in > mod_time_out)
+        {
+          apply_change(entry.path(), backup_path, "altered", mod_time_in);
+        }
+      } 
+      else
+      {
+        apply_change(entry.path(), backup_path, "created", mod_time_in);        
+      }
+    }
+  }
+}
+
+void File_Listener::apply_change(const fs::path&    in_path,
+                                 const fs::path&    out_path,
+                                 std::string        change_type,
+                                 fs::file_time_type mod_time)
+{
+  if(change_type!="deleted")
+  {
+    
+    logger.write_event(in_path, out_path, change_type, mod_time);
+    
+    // Non-delete events trigger copying.
+    fs::copy(in_path, out_path, _copy_options);
+    logger.write_event(in_path, out_path, "backed up", fs::file_time_type::clock::now());
+  }
+  else // More complex delete logic.
+  {
+    // Remove the delete file.  
+    if(fs::remove(in_path))
+    {
+      logger.write_event(in_path, out_path, change_type, fs::file_time_type::clock::now());
+    }  
+    if(fs::remove(out_path))
+    {
+      logger.write_event(in_path, out_path, change_type, fs::file_time_type::clock::now());
+    }  
+  }
+}
+
 
 fs::path File_Listener::get_out_path(const fs::path& file)
 {
@@ -187,7 +281,6 @@ void File_Listener::_load_files(std::string dir, std::unordered_set<std::string>
         set.insert(std::string(entry.path()));
       }
     }
-
   }
 }
 

@@ -18,17 +18,25 @@ void Logger::write_event(const std::string& in_dir_file,
                          fs::file_time_type event_time 
                         )
 {
-
   if (output_file.is_open())
   {
     // do a (horrible) cast to more convenient type
-    auto event_time_c = ch::system_clock::to_time_t(ch::file_clock::to_sys(event_time));
+    auto event_time_c = ch::system_clock::to_time_t(
+                                          ch::file_clock::to_sys(event_time));
 
-    output_file << std::string(80,'*') << "\n";
-    output_file << std::asctime(std::localtime(&event_time_c)) << " : ";
-    output_file << event_type << " : " << in_dir_file << "\n";
-    output_file << "Backed up File: " << out_dir_file << "\n";
-    
+    if(event_type == "backed up")
+    {
+      // Second output for the copy.
+      output_file << std::asctime(std::localtime(&event_time_c)) << "|";
+      output_file << event_type << " " << in_dir_file << " to " << out_dir_file << "\n";
+    }
+    else
+    {
+      // Altered, creted or deleted case.
+      output_file << std::asctime(std::localtime(&event_time_c)) << "|";
+      output_file << event_type << " " << in_dir_file << "\n";
+    }  
+   
     output_file.flush();    
   }
   else
@@ -109,6 +117,20 @@ bool Logger::read_in_out_dirs(std::string& in_directory,
 
 void Logger::browse_logs()
 {
+
+//  std::string line;
+//
+//  std::fstream logfile;
+//  logfile.open(_log_filename, std::ios::in);
+//
+//  if(logfile.is_open())
+//  {
+//    while(getline(logfile, line))
+//    {
+//    }
+//
+//  }
+
   return;
 };
 
