@@ -57,7 +57,7 @@ class Logger
 
   private:
 
-    const std::string _log_filename = "BackUpperLog.txt";
+    const std::string _log_filename = "backupper_log.txt";
     bool _log_exists = false;
     
     // Fixed strings in the logfile

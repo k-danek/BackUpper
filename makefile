@@ -5,11 +5,11 @@ INC_LOGGER=./src/Logger
 BUILD_TARGET=./bin
 INCLUDES= -I. -I$(INC_LISTENER) -I$(INC_LOGGER)
 
-all: file_listener
+all: backupper
 
 # Executables
-file_listener: main.o listener.o logger.o
-	$(CC) $(CFLAGS) -o $(BUILD_TARGET)/file_listener $(BUILD_TARGET)/main.o $(BUILD_TARGET)/listener.o $(BUILD_TARGET)/logger.o
+backupper: main.o listener.o logger.o
+	$(CC) $(CFLAGS) -o $(BUILD_TARGET)/backupper $(BUILD_TARGET)/main.o $(BUILD_TARGET)/listener.o $(BUILD_TARGET)/logger.o
 	
 # Object files
 main.o: listener.o
@@ -27,5 +27,5 @@ out_dir:
 -include $(INCLUDES)
 
 clean:
-	rm $(BUILD_TARGET)/*.o $(BUILD_TARGET)/file_listener
+	rm $(BUILD_TARGET)/*.o $(BUILD_TARGET)/backupper
 

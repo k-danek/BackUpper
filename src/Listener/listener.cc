@@ -38,7 +38,7 @@ void File_Listener::listen(unsigned long int milliseconds)
 
           // Get the path of the file without detele_ prefix.
           std::string unprefixed_filename = std::string(
-                entry.path()).erase(delete_pos, delete_pos+_del_prefix.length());
+                entry.path()).erase(delete_pos, _del_prefix.length());
 
           // Delete the unprefixed file in the backup directory if it is not
           // present in the hot directory.
@@ -53,7 +53,6 @@ void File_Listener::listen(unsigned long int milliseconds)
                          "deleted",
                          fs::file_time_type::clock::now()
                         );
-
           }
         }
         else if(_files_listened_to.contains(std::string(entry.path())))
