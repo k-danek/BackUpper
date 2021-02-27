@@ -10,6 +10,7 @@
 #include <regex>
 #include <algorithm>
 #include <locale>
+#include <functional>
 
 namespace fs = std::filesystem;
 namespace ch = std::chrono;
@@ -22,7 +23,6 @@ class Logger
     ~Logger();
 
     std::ofstream output_file;
-    //std::ifstream inputFile("inputFileName");
 
     // Writes a file event into the logfile.
     void write_event(const std::string& in_dir_file,

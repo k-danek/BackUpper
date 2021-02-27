@@ -14,6 +14,9 @@ void File_Listener::listen(unsigned long int milliseconds)
     
     std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
 
+    // Making a backup of files currently listened to.
+    _files_listened_to_temp = _files_listened_to;
+
     for(auto& entry: fs::recursive_directory_iterator(_dir_in_name))
     {
       // So far allowing for copying of regular files only
@@ -22,6 +25,9 @@ void File_Listener::listen(unsigned long int milliseconds)
         fs::path backup_path = get_out_path(entry.path()); 
         fs::file_time_type mod_time = last_write_time(entry.path());
         size_t delete_pos = std::string(entry.path().filename()).find(_del_prefix);
+
+        // Erasing from temporary set to check what is missing at the end;
+        _files_listened_to_temp.erase(std::string(entry.path()));
 
         // Delete string needs to be at the begining of the filename.
         // Otherwise, it would not be a prefix.
@@ -69,7 +75,20 @@ void File_Listener::listen(unsigned long int milliseconds)
         }
       }
     }
-    // open and close the log file
+
+    // Now go over the files that were not found during the iteration and 
+    // make log that they are deleted.
+    for(std::string na_path: _files_listened_to_temp)
+    {
+      // No need to take further actions as the file was already removed/renamed.
+      // Taking the time now as it is not clear when the file disappeared.
+      logger.write_event(na_path, "", "deleted", fs::file_time_type::clock::now());
+      
+      // update files that we listen to.
+      _files_listened_to.erase(na_path);
+    }
+
+    // Open and close the log file.
     logger.reopen();
   }
 }

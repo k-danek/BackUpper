@@ -54,6 +54,7 @@ class File_Listener
     std::string _dir_out_name = "";
 
     std::unordered_set<std::string> _files_listened_to;
+    std::unordered_set<std::string> _files_listened_to_temp;
     std::unordered_set<std::string> _files_backed;
     
     // Option set-up for copying the files.

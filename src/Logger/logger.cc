@@ -3,7 +3,6 @@
 
 Logger::Logger()
 {
-  //output_file.open(_log_filename, std::ios::app | std::fstream::out);
   _log_exists = fs::exists(_log_filename);
 };
 
@@ -69,6 +68,11 @@ bool Logger::log_exists()
 void Logger::add_log_header(std::string& in_directory,
                             std::string& out_directory)
 {
+  if(!output_file.is_open())
+  {
+    output_file.open(_log_filename, std::ios::app);
+  }
+
   output_file << "This is a log of the BackUpper CLI app.\n"
               << hot_dir  << in_directory  << "\n"
               << back_dir << out_directory << "\n"
@@ -141,21 +145,31 @@ void Logger::browse_logs()
 
     // Create a regular expession for the filtering of the logfile.
     std::string regex_string;
+
+    // Function to parse a line, i.e., split it into timestamp and log
+    std::function<std::string(std::string)> parse_line;
+
     switch(choice)
     {
       case 'w':
       {  
         // Only the log entries have pipes in them.
-        //regex = std::regex("\\\\|");
         regex_string = ".*\\|.*";
+        parse_line = [&](const std::string& line)
+                     {
+                       return line;
+                     }; 
         break;
       }
       case 'f':
       {
         std::cout << "\nPlease enter a regular expession (without quotation marks): ";
-        //std::string regex_str;
         std::cin >> regex_string;
-        //regex = std::regex(regex_str);
+        // This makes the regex ignore the timestamp.
+        parse_line = [&](const std::string& line)
+                     {
+                       return line.substr(1, line.find("|"));
+                     };
         break;
       }
       case 'd':
@@ -165,6 +179,11 @@ void Logger::browse_logs()
                   << "\"DD/MM/YYYY\", e.g., \"30/12/2021\": ";
         std::cin >> time_input;
         regex_string = time_input+".*";
+        // This makes the regex applied only to the timestamp.
+        parse_line = [&](const std::string& line)
+                     {
+                       return line.substr(0, line.find("|"));
+                     };
         break;
       }
     }
@@ -174,7 +193,7 @@ void Logger::browse_logs()
     // Looping through the lines of the file. 
     while(getline(logfile, line))
     {
-      if(std::regex_match(line, regex_line))
+      if(std::regex_match(parse_line(line), regex_line))
       {
         std::cout << line << "\n"; 
       }
